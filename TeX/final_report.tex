@@ -1,0 +1,549 @@
+\documentclass[12pt, english]{article}
+
+% PACKAGES
+\usepackage{amsfonts} % \mathbb
+\usepackage{amsmath} % \begin{aligned}
+\usepackage{amsthm} % \theoremstyle
+\usepackage[a4paper, top=1in, bottom=1in]{geometry}
+\usepackage{booktabs}
+
+% TITLE PAGE
+\title{Forecasting Models: Time Series Analysis\\
+	   Final report}
+\author{Mukhtar Urynbassarov}
+
+% INIT
+\setcounter{section}{0}
+\numberwithin{equation}{section} % turn on numbering like (3.1.1)
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[subsection]
+\newtheorem{lemma}{Lemma}[subsection]
+
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[subsection]
+\newtheorem{example}{Example}[subsection]
+
+% COMMANDS
+% NUMBERS AND FUNCTIONS
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\dd}{\;\mathrm{d}}
+\newcommand{\const}{\operatorname{const}}
+
+% DERIVATIVES
+\newcommand{\dv}[2]{\dfrac{\dd #1}{\dd #2}}
+\newcommand{\pardv}[2]{\dfrac{\partial #1}{\partial #2}}
+\newcommand{\parddv}[2]{\dfrac{\partial^2 #1}{\partial {#2}^2}}
+
+% https://tex.stackexchange.com/questions/129978/how-to-remove-section-subsection-titles
+\newcommand{\fakesection}[1]{
+	\par\refstepcounter{section} % Increase section counter
+	\sectionmark{#1} % Add section mark (header)
+	\addcontentsline{toc}{section}{\protect\numberline{\thesection}#1} % Add section to ToC
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+	\textbf{Time series analysis} comprises methods for analyzing time series data in order to extract meaningful statistics and other characteristics of the data.
+	
+	\textbf{Time series forecasting} is the use of a model to predict future values based on previously observed values.
+	
+	While regression analysis is often employed in such a way as to test theories that the current values of one or more independent time series affect the current value of another time series, this type of analysis of time series is not called "time series analysis", which focuses on comparing values of a single time series or multiple dependent time series at different points in time. Interrupted time series analysis is the analysis of interventions on a single time series.
+\end{abstract}
+
+\section*{Abbreviations}
+\begin{itemize}
+	\item TSA --- Time Series Analysis
+	\item MA --- Moving Average
+	\item WMA --- Weighted Moving Average
+	\item ES --- Exponential Smoothing
+\end{itemize}
+
+% ========================================================================================================
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{A1: Introduction to TSA}}
+\end{center}
+
+% ========================================================================================================
+% ========================================================================================================
+\section{Time series}
+\subsection{Definition}
+\textbf{Time series} --- a sequence of some statistical measures taken at equally separated time intervals.
+$$
+\left\{ Y_1,\ Y_2,\ \dots,\ Y_T \right\}
+$$
+Example:  
+$$Y_t = \mu + \varepsilon_t + \theta \varepsilon_{t-1} \ ,$$
+where $\{ \varepsilon_t \}$ --- independent normally distributed variables with parameters $(0,\  \sigma^2)$
+
+% ========================================================================================================
+\subsection{Time Series operators}
+$$f \left( \{ X_t \}, \{ Y_t \} \right) = \{ Z_t \}$$
+
+\begin{itemize}
+	\item Additive: $Z_t = X_t + Y_t$
+	\item Multiplicative: $\forall \lambda \in \mathbb{R} : Z_t = \lambda X_t$
+	\item Lag operator: $
+		\begin{aligned}[t]
+			L X_t &= X_{t-1} \\
+			L^2 X_t &= L X_{t-1} = X_{t-2} \\
+			& \dots \\
+			L^k X_t &= X_{t-k},\ \forall k \in \mathbb{N}^*
+		\end{aligned}
+		$
+\end{itemize}
+Those operators are commutative and distributive between each other:
+$$L(X_t + Y_t) = X_{t-1} + Y_{t-1}$$
+
+
+% ========================================================================================================
+% ========================================================================================================
+\section{Numerical characteristics of time series }
+\subsection{Autocovariance}
+\begin{definition}
+	Autocovariance is the covariance of the time series point with its delayed (lagged) copy.
+\end{definition}
+First order autocovariance:
+\begin{equation}
+	\gamma_{1t} = \mathbb{E} \left[ (Y_t - \mu_t)(Y_{t-1} - \mu_{t-1}) \right]
+\end{equation}
+$j^{th}$ order autocovariance:
+\begin{equation}
+	\gamma_{jt} = \mathbb{E} \left[ (Y_t - \mu_t)(Y_{t-j} - \mu_{t-j}) \right]
+\end{equation}
+In case we have joint density distribution function $f$:
+\begin{equation}
+	\gamma_{jt} = \underbrace{\int\limits_{-\infty}^{\infty} \dots \int\limits_{-\infty}^{\infty}}_{j \text{ times}} (Y_t - \mu_t) (Y_{t-j} - \mu_{t-j}) f(Y_t,\ \dots,\ Y_{t-j}) \dd Y_t \ \dots \dd Y_{t-j}
+\end{equation}
+
+% ========================================================================================================
+\subsection{Autocorrelation}
+\begin{definition}
+	Autocorrelation is the correlation of the time series point with its delayed (lagged) copy.
+\end{definition}
+\begin{equation}
+	\rho_j = \text{Corr}(Y_t,\, Y_{t-j}) = \frac{\text{Cov}(Y_t,\, Y_{t-j})}{\sqrt{\text{Var}(Y_t) \text{Var}(Y_{t-j})}} = \frac{\gamma_j}{\sqrt{\gamma_0^2}}
+\end{equation}
+
+% ========================================================================================================
+\subsection{Weak and strong stationarity}
+\begin{definition}
+	\label{weak_stationarity}
+	\textbf{Weak or Covariant stationarity}
+	
+	Process $Y_t$ is called weakly (covariant) stationary, if neither expectation nor autocovariances $\gamma_{jt}$ depends on the time $t$.
+\end{definition}
+
+\begin{definition}
+	\label{strong_stationarity}
+	\textbf{Strong or Strict stationarity}
+	
+	Process $Y_t$ is called strongly (strictly) stationary, if any subsequence of time series $Y_t$ depends only on the intervals separating values in this subsequence.
+	
+	$\forall \, j_1,\, \dots,\, j_n$ joint distribution of a random vector $(Y_t,\, Y_{t+j_1},\, \dots,\, Y_{t+j_n})$ depends only on the intervals separating those values: $j_2 - j_1,\, j_3 - j_2,\, \dots,\, j_n - j_{n-1}$.
+\end{definition}
+
+\begin{lemma}
+	For any weak stationary process autocovariance $\gamma_j$ verifies the following symmetry property:
+	\[
+		\gamma_j = \gamma_{j-1}
+	\] 
+\end{lemma}
+
+
+% ========================================================================================================
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{A2: Forecasting with TSA}}
+\end{center}
+
+
+% ========================================================================================================
+% ========================================================================================================
+\section{Time series classical decomposition}
+We consider the following decomposition of a time series $Y$:
+\begin{equation}
+	Y = T \times S \times C \times I
+\end{equation}
+Where:
+\begin{itemize}
+	\item $[\, T \,]$ \textbf{Trend} --- long-term movement in the time series over an extended period. \\
+		
+		Methods used for trend estimation:
+		\begin{itemize}
+			\item Leas squares approximation (Regression) 
+			\item Moving average (MA)
+			\item Exponential smoothing (ES)
+			\item Freehand method
+			\item Semi-averages method
+		\end{itemize} 
+	\item $[\, S \,]$ \textbf{Seasonal variation} --- variation in a time series within one year that is repeated more or less regularly. Seasonal variation may be caused by the temperature, public holidays, cycles of seasons or holidays. So, we must estimate how the data vary from month to month or other period of time. \\
+		
+		A \textbf{seasonal index} is a set of numbers chowing the relative values of a variable during the months of a year. Methods used for calculating SI:
+		\begin{itemize}
+			\item Average percentage method
+			\item Percentage or ratio to trend method
+			\item Percentage moving average
+		\end{itemize}
+		
+		We obtain the deseasonalized data by dividing every monthly entry of the initial data by the seasonal index found by one of the three methods.
+		\begin{equation}
+		\label{deseasonilize}
+			Y / S = T \times C \times I
+		\end{equation}
+	\item $[\, C \,]$ \textbf{Cyclical fluctuations} --- recurring up and down movements with respect to trend that have a duration of several years. Their study is obtained after the de-trading (adjusting (\ref{deseasonilize}) by dividing by the results of one of the methods of trend analysis):
+		\begin{equation}
+			\frac{Y}{S \times T} = C \times I
+		\end{equation}
+	\item $[\, I \,]$ \textbf{Irregular variations} --- erratic variations from trend that cannot be ascribed to the cyclical or seasonal influences.
+\end{itemize}
+
+
+% ========================================================================================================
+% ========================================================================================================
+\section{Steps to complete forecasting}
+\begin{enumerate}
+	\item Collect data and check if they are reliable. For a better forecast it is suggested to obtain related time series.
+	\item Plot time series.
+	\item Construct long term trend curve using one of the methods mentioned before.
+	\item If seasonal variations present, obtain a seasonal index and deseasonalize data (adjusting data to seasonal variations).
+	\item Adjust deseasonalized data to trend.\\[.5em]
+		  Resulting data contain (in theory) only cyclic and irregular variations.
+	\item Plot cyclic variations obtained in step 5. No periodicities should present.
+	\item Create a forecast by combining results from steps 1 to 6. Identify and evaluate all possible sources of errors and their magnitude.\\[.5em]
+		However sometimes we ignore $C \times I$ for forecasts and assume:
+		\[
+			Y = T \times S
+		\]
+\end{enumerate}
+
+
+% ========================================================================================================
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{A3: Difference equations}}
+\end{center}
+
+
+% ========================================================================================================
+% ========================================================================================================
+\section{Difference equations} % 21.10.2019
+\subsection{First order difference equations}
+\begin{definition}
+	A difference equation is an expression relating a variable $Y_t$ to its previous values.
+\end{definition}
+
+\begin{definition}
+	\textbf{Linear first order difference equation (recursive)}
+	
+	\begin{equation}
+		\tag{D 1.1}
+		\label{D:1.1}
+		Y_t = \varphi Y_{t-1} + w_t \ ,
+	\end{equation}
+	where $\varphi$ --- dynamic coefficient.
+	
+	This is a \textit{first order} linear difference equation because only the first lag of the variable $(Y_{t-1})$ appears in the equation and it expresses $Y_t$ as a \underline{linear function} of $Y_{t-1}$ and $w_t$.
+\end{definition}
+
+%\begin{example}
+%	Goldfield (1973)
+%	
+%	\begin{equation}
+%		\tag{D 1.2}
+%		\label{D:1.2}
+%		m_t = 0.27 + 0.72 m_{t-1} + 0.19 I_t - 0.045 r_{bt} - 0.019 r_{ct}
+%	\end{equation}
+%	\begin{gather*}
+%		Y_t = m_t,\ Y_{t-1} = Y_{t-1} = m_{t-1},\ \varphi = 0.72, \\
+%		w_t = 0.27 + 0.19 I_t - 0.045 r_{bt} - 0.019 r_{ct}
+%	\end{gather*}
+%	More in [James D. Hamilton --- Time Series Analysis (1994)] 
+%\end{example}
+
+Recursive substitution for (\ref{D:1.1}) gives us a solution:
+\begin{equation}
+	\tag{D 1.3}
+	\label{D:1.3}
+	Y_t = \varphi^{t+1} Y_{-1} + \sum\limits_0^t w_i \varphi^{t-i}
+\end{equation}
+
+% ========================================================================================================
+\subsection*{Dynamic multipliers}
+
+Note that (\ref{D:1.3}) expresses $Y_t$, as a linear function of the initial value $Y_{-1}$, and
+the historical values of $w$. This makes it very easy to calculate the effect of $w_0$ on
+$Y_{-1}$. If $w_0$ were to change with $Y_t$, and $w_1,\ \dots,\ w_t$ taken as unaffected, the
+effect on $Y_t$, would be given by:
+
+\begin{equation}
+	\tag{D 1.4}
+	\label{D:1.4}
+	\pardv{Y_t}{w_0} = \varphi^t
+\end{equation}
+Then $Y_{t+j}$ could be described as function of $Y_{t-1} \text{ and } w_{t+1},\ \dots,\ w_{t+j}$:
+\begin{equation}
+	\tag{D 1.5}
+	\label{D:1.5}
+	Y_{t+j} = \varphi^{t+j+1} Y_{t-1} + \sum\limits_t^{t+j} w_i \varphi^{t-i}
+\end{equation}
+The effect of $w_t$ on $w_{t+j}$ is:
+\begin{equation}
+	\tag{D 1.6}
+	\label{D:1.6}
+	\pardv{Y_{t+j}}{w_t} = \varphi^j
+\end{equation}
+
+Thus the dynamic multiplier (\ref{D:1.6}) depends only on $(j)$, the length of time separating
+the disturbance to the input $\{w_t\}$ and the observed value of the output $(Y_{t+j})$. The
+multiplier does not depend on $t$; that is, it does not depend on the dates of the
+observations themselves. This is true for any linear difference equation.
+
+% 04.11.2019 (meaningless class)
+
+% ========================================================================================================
+\subsection{$p^{th}$ order difference equation}
+
+\begin{definition}
+	\textbf{$p^{th}$ order difference equation}
+	\begin{equation}
+		\tag{D 2.1}
+		\label{D:2.1}
+		Y_t = \varphi_1 Y_{t-1} + \varphi_2 Y_{t-2} + \dots + \varphi_p Y_{t-p} + w_t
+	\end{equation}
+\end{definition}
+
+Defining $\xi_t,\, V_t$ and $F$ vectors ($F \in \mathbb{M}_{p,\,p}$)
+
+\begin{equation}
+	\tag{D 2.2, 2.3}
+	\label{D:2.3}
+	\xi_t = \begin{bmatrix} Y_t \\ Y_{t-1} \\ \dots \\ Y_{t-p+1} \end{bmatrix},\ 
+	V_t = \begin{bmatrix} Y_t \\ Y_{t-1} \\ \dots \\ Y_{t-p+1} \end{bmatrix},\ 
+	F = 
+	\begin{pmatrix}
+		\varphi_1 & \varphi_2 & \dots & \varphi_p \\
+		1 & 0 & \dots & 0 \\
+		0 & 1 & \dots & 0 \\
+		\vdots & \vdots & \ddots & \vdots \\
+		0 & 0 & 1 & 0
+	\end{pmatrix}
+\end{equation}
+
+we will rewrite (\ref{D:2.1}) in a vector form:
+\begin{equation}
+	\tag{D 2.4}
+	\label{D:2.4}
+	\xi_t = F+ \xi_{t-1} + V_t
+\end{equation}
+
+Dynamic multiplier could be found in the same way we found it for (\ref{D:1.1}).
+(\ref{D:2.6}) is a generalization for (\ref{D:1.3}):
+\begin{equation}
+	\tag{D 2.6}
+	\label{D:2.6}
+	\xi_t = F^{t+1} \xi_{-1} + \sum\limits_0^t V_i F^{t-i}
+\end{equation}
+\begin{equation}
+	\tag{D 2.8}
+	\label{D:2.8}
+	\begin{aligned}
+		Y_t &= f^{(t+1)}_{11} Y_{-1} + f^{(t+1)}_{12} Y_{-2} + \dots + f^{(t+1)}_{1p} Y_{-p} \\
+		&+ f^{(t)}_{11} w_0 + f^{(t-1)}_{11} w_1 + \dots + f^{(1)}_{11} w_{t-1} + w_t
+	\end{aligned}
+\end{equation} \\
+(\ref{D:2.9}) is a generalization for (\ref{D:1.5}):
+\begin{equation}
+	\tag{D 2.9}
+	\label{D:2.9}
+	\xi_{t+j} = F^{j+1} \xi_{t-1} + \sum\limits_0^j V_{t+i} F^{j-i}
+\end{equation}
+\begin{equation}
+	\tag{D 2.10}
+	\label{D:2.10}
+	\begin{aligned}
+		Y_{t+j} &= f^{(j+1)}_{11} Y_{t-1} + f^{(j+1)}_{12} Y_{t-2} + \dots + f^{(j+1)}_{1p} Y_{t-p} \\
+		&+ f^{(j)}_{11} w_t + f^{(j-1)}_{11} w_{t+1} + \dots + f^{(1)}_{11} w_{t+j-1} + w_{t+j}
+	\end{aligned}
+\end{equation}
+$f_{ij}$ in equations above represent $(i,\, j)$ element of matrix $F$.
+
+% ========================================================================================================
+\subsection*{Dynamic multipliers for $p^{th}$ order difference equations}
+% Going to change all equations to align because of better top margin, but later
+\begin{align}
+	\tag{D 2.11}
+	\label{D:2.11}
+	\pardv{Y_{t+j}}{w_t} = f^{(j)}_{11}
+\end{align} \\[1em]
+
+Although numerical simulation may be adequate for many circumstances, it
+is also useful to have a simple analytical characterization of $ $, which, we
+know from (\ref{D:2.11}), is given by the $(1,\, 1)$ element of $F^{(j)}$. This is fairly easy to obtain
+in terms of the eigenvalues of the matrix $F$. Recall that the eigenvalues of a matrix
+$F$ are those numbers $\lambda$ for which:
+\begin{equation}
+	\tag{D 2.13}
+	\label{D:2.13}
+	|F - \lambda \mathbf{I}_p| = 0
+\end{equation}
+For example, for $p=2$ the eigenvalues are going to be:
+\[
+	\lambda_{\pm} = \frac{\varphi_1 \pm \sqrt{\varphi^2_1 + 4 \varphi_2}}{2}
+\]
+
+
+% ========================================================================================================
+% ========================================================================================================
+%\section{ARMA models} % 10.12.2019
+%\subsection{First order autoregressive process}
+
+
+% ========================================================================================================
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\fakesection{Exercises}
+\begin{center}
+	\huge{\textbf{Exercises}}
+\end{center}
+In this section I will cover exercises from classes with following datasets:
+\begin{enumerate}
+	\item Murders in the US (in thousands) for period 1985--1995.
+	\item Monthly new housing prices (in thousands) for the US for period\\January 1990 -- December 1995.
+	\item Divorces and annulments (in thousands) in the US for period 1986--1995
+	\item Monthly values (in millions of dollars) of imports from Brazil for period 1994--1996.
+	\item Monthly values of export from the US to Canada (in billions of dollars) for period 1990--1995.
+\end{enumerate}
+% Generated with:
+% https://www.tablesgenerator.com/latex_tables
+
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{Exercise: 1}}
+\end{center}
+
+\begin{center}
+	\begin{tabular}{||c|c|c|c||}
+		\hline\hline
+		Year & Murders & Year & Murders \\
+		\hline\hline
+		1985 & 19.5 & 1990 & 23.8 \\
+		1986 & 21.2 & 1991 & 25.7 \\
+		1987 & 20.8 & 1992 & 24.2 \\
+		1988 & 21.4 & 1993 & 25.2 \\
+		1989 & 21.9 & 1994 & 24.1 \\
+		& & 1995 & 22.7 \\
+		\hline\hline
+	\end{tabular}
+\end{center}
+
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{Exercise: 2}}
+\end{center}
+
+\begin{center}
+	\begin{tabular}{||c|c|c|c|c|c|c||}
+		\hline\hline
+		Month     & 1990  & 1991  & 1992  & 1993  & 1994  & 1995  \\
+		\hline\hline
+		January   & 99.2  & 52.5  & 71.6  & 70.5  & 76.2  & 84.5  \\
+		February  & 86.9  & 59.1  & 78.8  & 74.6  & 83.5  & 81.6  \\
+		March     & 108.5 & 73.8  & 111.6 & 95.5  & 134.3 & 103.8 \\
+		April     & 119   & 99.7  & 107.6 & 117.8 & 137.6 & 116.9 \\
+		May       & 121.1 & 97.7  & 115.2 & 120.9 & 148.8 & 130.5 \\
+		June      & 117.8 & 103.4 & 117.8 & 128.5 & 136.4 & 123.4 \\
+		July      & 111.2 & 103.5 & 106.2 & 115.3 & 127.8 & 129.1 \\
+		August    & 102.8 & 94.7  & 109.9 & 121.8 & 139.8 & 135.8 \\
+		September & 93.1  & 86.6  & 106   & 118.5 & 130.1 & 122.4 \\
+		October   & 94.2  & 101.8 & 111.8 & 123.2 & 130.6 & 126.2 \\
+		November  & 81.4  & 75.6  & 84.5  & 102.3 & 113.4 & 107.2 \\
+		December  & 57.4  & 65.6  & 78.6  & 98.7  & 98.5  & 92.8  \\
+		\hline\hline
+	\end{tabular}
+\end{center}
+
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{Exercise: 3}}
+\end{center}
+
+\begin{center}
+	\begin{tabular}{||c|c|c|c||}
+		\hline\hline
+		Year & Divorces and annulments & Year & Divorces and annulments \\
+		\hline\hline
+		1986 & 1178 & 1991 & 1189 \\
+		1987 & 1166 & 1992 & 1215 \\
+		1988 & 1167 & 1993 & 1187 \\
+		1989 & 1157 & 1994 & 1191 \\
+		1990 & 1182 & 1995 & 1169 \\
+		\hline\hline
+	\end{tabular}
+\end{center}
+
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{Exercise: 4}}
+\end{center}
+
+\begin{center}
+	\begin{tabular}{||c|c|c|c|c|c|c|c|c|c|c|c|c||}
+		\hline\hline
+		Years & Jan & Feb & Mar & Apr & May & June & July & Aug & Sept & Oct & Nov & Dec \\
+		\hline\hline
+		1994 & 686 & 569 & 741 & 645 & 739 & 762 & 768 & 783 & 842 & 801 & 677 & 671 \\
+		1995 & 805 & 633 & 745 & 647 & 702 & 732 & 715 & 812 & 692 & 775 & 775 & 797 \\
+		1996 & 741 & 633 & 686 & 716 & 723 & 737 & 729 & 859 & 732 & 706 & 747 & 764 \\
+		\hline\hline
+	\end{tabular}
+\end{center}
+
+% ========================================================================================================
+% ========================================================================================================
+\newpage
+\begin{center}
+	\huge{\textbf{Exercise: 5}}
+\end{center}
+
+\begin{center}
+	\begin{tabular}{|c|c|c|c|c|c|c|}
+		\hline\hline
+		Month & 1990 & 1991 & 1992 & 1993 & 1994 & 1995 \\
+		\hline\hline
+		January & 6.3 & 6.8 & 6.9 & 6.9 & 7.6 & 10.1 \\
+		February & 6.7 & 6.4 & 7.0 & 7.7 & 8.2 & 10.2 \\
+		March & 8.0 & 7.1 & 8.2 & 9.5 & 10.4 & 11.7 \\
+		April & 7.4 & 7.6 & 7.8 & 8.8 & 9.4 & 10.6 \\
+		May & 7.9 & 7.7 & 7.7 & 8.8 & 10.0 & 11.4 \\
+		June & 7.5 & 7.5 & 8.4 & 9.1 & 10.2 & 10.9 \\
+		July & 6.2 & 6.5 & 6.9 & 7.1 & 7.6 & 8.4 \\
+		August & 6.7 & 6.8 & 7.0 & 8.3 & 9.9 & 10.8 \\
+		September & 6.4 & 7.4 & 7.9 & 8.6 & 10.2 & 10.8 \\
+		October & 7.5 & 8.3 & 8.0 & 8.9 & 10.5 & 11.4 \\
+		November & 7.4 & 7.0 & 7.7 & 8.9 & 10.6 & 11.1 \\
+		December & 5.9 & 6.1 & 7.1 & 7.9 & 9.8 & 9.7 \\
+		\hline\hline
+	\end{tabular}
+\end{center}
+
+\end{document}
